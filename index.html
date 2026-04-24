@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mourish Star | Smart Search Cinema</title>
+    <title>Mourish Star | Premium Stream</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -16,13 +16,12 @@
 
         .app-shell { display: flex; height: 100vh; width: 100vw; }
 
-        /* Adaptive Nav System */
+        /* Adaptive Nav */
         .nav-system {
             background: rgba(8, 8, 8, 0.98);
             backdrop-filter: blur(40px);
             border: 1px solid rgba(255,255,255,0.05);
             display: flex; z-index: 100;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @media (orientation: portrait) {
@@ -34,7 +33,6 @@
             }
             .sidebar-logo { display: none; }
             .grid-layout { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-            .search-overlay { top: 0; left: 0; width: 100vw; }
         }
 
         @media (orientation: landscape) {
@@ -52,12 +50,23 @@
             background: radial-gradient(circle at top right, #0a1120, #000);
         }
 
-        /* Search Animation */
-        #search-container {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            max-width: 0; opacity: 0; overflow: hidden;
+        /* Movie Cards */
+        .movie-card:hover img { transform: scale(1.05); }
+        .action-btn {
+            transform: translateY(10px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #search-container.open { max-width: 400px; opacity: 1; margin-right: 15px; }
+        .movie-card:hover .action-btn {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Player Controls Overlays */
+        #player-overlay:fullscreen {
+            width: 100vw;
+            height: 100vh;
+        }
 
         .shimmer {
             background: linear-gradient(90deg, #050505 25%, #151515 50%, #050505 75%);
@@ -72,12 +81,11 @@
 
     <div class="app-shell">
         <aside class="nav-system">
-            <div class="sidebar-logo w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black mb-10 shadow-lg">M</div>
-            <nav class="flex flex-row landscape:flex-col gap-10 opacity-60 items-center">
-                <button onclick="window.location.reload()" class="text-xl hover:text-blue-500">🏠</button>
-                <button onclick="toggleSearch()" class="text-xl hover:text-blue-500">🔍</button>
-                <button class="text-xl hover:text-blue-500">🔥</button>
-                <button class="text-xl hover:text-blue-500">📂</button>
+            <div class="sidebar-logo w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black mb-10 shadow-lg shadow-blue-600/20">M</div>
+            <nav class="flex flex-row landscape:flex-col gap-10 opacity-60 items-center text-xl">
+                <button onclick="window.location.reload()" class="hover:scale-110 transition-transform">🏠</button>
+                <button class="hover:scale-110 transition-transform">🔍</button>
+                <button class="text-blue-500 hover:scale-110 transition-transform">📥</button> 
             </nav>
             <div class="landscape:mt-auto">
                 <div class="w-10 h-10 rounded-full border border-blue-500/30 overflow-hidden">
@@ -88,122 +96,143 @@
 
         <main class="content-scroll no-scrollbar">
             <header class="flex flex-col md:flex-row justify-between md:items-center mb-10 gap-6">
-                <div class="flex items-center">
-                    <div id="search-container" class="flex items-center">
-                        <input type="text" id="search-input" oninput="executeSearch()" 
-                               placeholder="Search global cinema..." 
-                               class="bg-white/10 border border-white/10 rounded-xl py-2 px-4 text-sm w-full focus:outline-none focus:ring-1 focus:ring-blue-500">
-                    </div>
-                    <div id="title-group">
-                        <h1 class="text-4xl font-black tracking-tighter">Mourish <span class="text-blue-500">Star</span></h1>
-                        <p id="sub-label" class="text-slate-500 font-bold uppercase tracking-[0.3em] text-[9px] mt-2">Trending Content</p>
-                    </div>
+                <div>
+                    <h1 class="text-4xl font-black tracking-tighter">Mourish <span class="text-blue-500">Star</span></h1>
+                    <p class="text-slate-500 font-bold uppercase tracking-[0.3em] text-[9px] mt-2">Ultra HD Streaming Active</p>
                 </div>
-                
-                <div class="flex gap-3 overflow-x-auto no-scrollbar w-full md:max-w-xl" id="lang-tags">
-                    </div>
+                <div class="flex gap-3 overflow-x-auto no-scrollbar w-full md:max-w-xl" id="lang-tags"></div>
             </header>
 
-            <div id="results-grid" class="grid-layout grid">
-                </div>
+            <div id="results-grid" class="grid-layout grid"></div>
         </main>
     </div>
 
-    <div id="player-overlay" class="fixed inset-0 bg-black z-[200] hidden">
-        <button onclick="closePlayer()" class="absolute top-6 right-6 z-[210] w-12 h-12 bg-black/60 backdrop-blur-xl rounded-full text-2xl hover:bg-red-600 transition-all">&times;</button>
-        <div id="player-container" class="w-full h-full"></div>
+    <div id="player-overlay" class="fixed inset-0 bg-black z-[200] hidden flex flex-col">
+        <div class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-10 opacity-0 hover:opacity-100 transition-opacity duration-300">
+            <div>
+                <h2 id="playing-title" class="text-xl font-bold text-white">...</h2>
+                <div class="flex gap-4 items-center">
+                    <button id="dl-btn-player" class="text-blue-400 text-[10px] font-black uppercase tracking-widest hover:text-white">↓ Download 4K</button>
+                    <span class="text-white/30 text-[10px]">|</span>
+                    <button onclick="toggleInternalFullscreen()" class="text-white/50 text-[10px] font-black uppercase tracking-widest hover:text-white">⛶ Toggle Fullscreen</button>
+                </div>
+            </div>
+            <button onclick="closePlayer()" class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full text-3xl hover:bg-red-600 transition-all">&times;</button>
+        </div>
+        <div id="player-container" class="flex-1 w-full h-full bg-black">
+            </div>
     </div>
 
     <script>
         const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjNDYyM2M4ZWU4YzRkNmJjNWMxNzQyMGYwMGQ5YzE3ZSIsIm5iZiI6MTc3NzA0Mzg3Ni4zODIwMDAyLCJzdWIiOiI2OWViODlhNDYwYmJmMDk5MTQwMjg0N2YiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.ka7Dpz7vxBK-x3rWCGE27HgMoXaVRDw4TVSn86_cj-g";
-        const LANGS = [{code:'ta', name:'Tamil'}, {code:'hi', name:'Hindi'}, {code:'te', name:'Telugu'}, {code:'kn', name:'Kannada'}, {code:'ml', name:'Malayalam'}, {code:'en', name:'English'}];
         let activeLang = 'ta';
-        let isSearchOpen = false;
 
         function init() {
             const tags = document.getElementById('lang-tags');
-            tags.innerHTML = LANGS.map(l => `
-                <button onclick="changeLang('${l.code}', this)" class="px-5 py-2 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${l.code === 'ta' ? 'bg-blue-600 border-blue-600' : 'bg-white/5'}">
+            const langs = [{code:'ta', name:'Tamil'}, {code:'hi', name:'Hindi'}, {code:'en', name:'English'}, {code:'te', name:'Telugu'}];
+            tags.innerHTML = langs.map(l => `
+                <button onclick="changeLang('${l.code}', this)" class="px-6 py-2 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-widest transition-all ${l.code === activeLang ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40' : 'bg-white/5 text-white/60'}">
                     ${l.name}
                 </button>
             `).join('');
             loadMovies();
         }
 
-        function toggleSearch() {
-            const container = document.getElementById('search-container');
-            const title = document.getElementById('title-group');
-            isSearchOpen = !isSearchOpen;
-            if (isSearchOpen) {
-                container.classList.add('open');
-                if(window.innerWidth < 768) title.classList.add('hidden');
-                document.getElementById('search-input').focus();
-            } else {
-                container.classList.remove('open');
-                title.classList.remove('hidden');
-                document.getElementById('search-input').value = '';
-                loadMovies();
-            }
-        }
-
-        async function executeSearch() {
-            const query = document.getElementById('search-input').value;
-            if (query.length < 2) return;
-            
-            showSkeletons();
-            document.getElementById('sub-label').innerText = `Searching for: ${query}`;
-            
-            const res = await fetch(`https://api.themoviedb.org/3/search/multi?query=${query}&region=IN`, {
-                headers: { 'Authorization': `Bearer ${TOKEN}` }
-            });
-            const data = await res.json();
-            renderGrid(data.results);
-        }
-
         async function loadMovies() {
-            showSkeletons();
-            const res = await fetch(`https://api.themoviedb.org/3/discover/movie?with_original_language=${activeLang}&sort_by=popularity.desc&region=IN`, {
-                headers: { 'Authorization': `Bearer ${TOKEN}` }
-            });
-            const data = await res.json();
-            renderGrid(data.results);
-        }
-
-        function showSkeletons() {
-            document.getElementById('results-grid').innerHTML = Array(12).fill(0).map(() => `<div class="shimmer aspect-[2/3] rounded-[2rem]"></div>`).join('');
+            const grid = document.getElementById('results-grid');
+            grid.innerHTML = Array(12).fill(0).map(() => `<div class="shimmer aspect-[2/3] rounded-[2rem]"></div>`).join('');
+            
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/discover/movie?with_original_language=${activeLang}&sort_by=popularity.desc&region=IN`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const data = await res.json();
+                renderGrid(data.results);
+            } catch (err) {
+                console.error("Failed to fetch movies");
+            }
         }
 
         function renderGrid(movies) {
             const grid = document.getElementById('results-grid');
             grid.innerHTML = movies.filter(m => m.poster_path).map(m => `
-                <div class="movie-card group cursor-pointer" onclick="watchMovie(${m.id}, '${(m.title || m.name).replace(/'/g, "\\'")}')">
-                    <div class="relative overflow-hidden rounded-[2rem] aspect-[2/3] border border-white/5 group-hover:border-blue-500/50 shadow-2xl">
-                        <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                            <div class="w-12 h-12 bg-white rounded-full text-black flex items-center justify-center font-bold pl-1 scale-75 group-hover:scale-100 transition-transform">▶</div>
+                <div class="movie-card group cursor-pointer relative">
+                    <div class="relative overflow-hidden rounded-[2rem] aspect-[2/3] border border-white/5 shadow-2xl transition-all duration-500">
+                        <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover transition-transform duration-700">
+                        
+                        <div class="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-4 transition-all duration-300">
+                            <button onclick="watchMovie(${m.id}, '${m.title.replace(/'/g, "")}')" class="action-btn bg-white text-black px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-tighter">▶ Watch Now</button>
+                            <button onclick="downloadMovie(${m.id})" class="action-btn bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-tighter">↓ Download</button>
                         </div>
                     </div>
-                    <p class="text-[11px] font-bold mt-4 text-center truncate px-2 text-slate-400 group-hover:text-white">${m.title || m.name}</p>
+                    <p class="text-[11px] font-bold mt-4 text-center truncate px-2 opacity-60 tracking-tight">${m.title}</p>
                 </div>
             `).join('');
         }
 
-        function changeLang(code, el) {
-            activeLang = code;
-            document.querySelectorAll('#lang-tags button').forEach(b => b.classList.remove('bg-blue-600', 'border-blue-600'));
-            el.classList.add('bg-blue-600', 'border-blue-600');
-            loadMovies();
+        function watchMovie(id, title) {
+            const overlay = document.getElementById('player-overlay');
+            const container = document.getElementById('player-container');
+            
+            document.getElementById('playing-title').innerText = title;
+            document.getElementById('dl-btn-player').onclick = () => downloadMovie(id);
+            
+            // Injects the player
+            container.innerHTML = `<iframe src="https://vidsrc.me/embed/movie?tmdb=${id}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
+            overlay.classList.remove('hidden');
+
+            // Trigger Fullscreen & Landscape Lock
+            requestFullScreen(overlay);
         }
 
-        function watchMovie(id, title) {
-            const player = document.getElementById('player-container');
-            player.innerHTML = `<iframe src="https://vidsrc.me/embed/movie?tmdb=${id}" class="w-full h-full" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
-            document.getElementById('player-overlay').classList.remove('hidden');
+        function requestFullScreen(element) {
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            }
+
+            // Attempt to lock orientation to landscape
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(e => console.log("Orientation lock not supported"));
+            }
+        }
+
+        function toggleInternalFullscreen() {
+            if (!document.fullscreenElement) {
+                requestFullScreen(document.getElementById('player-overlay'));
+            } else {
+                document.exitFullscreen();
+            }
         }
 
         function closePlayer() {
-            document.getElementById('player-overlay').classList.add('hidden');
+            const overlay = document.getElementById('player-overlay');
+            overlay.classList.add('hidden');
             document.getElementById('player-container').innerHTML = '';
+            
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+            
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
+        }
+
+        function downloadMovie(id) {
+            window.open(`https://vidsrc.me/download/movie?tmdb=${id}`, '_blank');
+        }
+
+        function changeLang(code, el) {
+            activeLang = code;
+            document.querySelectorAll('#lang-tags button').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+                b.classList.add('bg-white/5', 'text-white/60');
+            });
+            el.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+            el.classList.remove('bg-white/5', 'text-white/60');
+            loadMovies();
         }
 
         window.onload = init;
