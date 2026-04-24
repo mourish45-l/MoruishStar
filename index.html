@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mourish Star | Adaptive Cinema</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #3b82f6; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #000; color: #fff; margin: 0; 
+            overflow: hidden; height: 100vh; width: 100vw;
+        }
+
+        /* Responsive Layout Engine */
+        .app-shell {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            transition: all 0.5s ease;
+        }
+
+        /* Sidebar for Landscape / Bottom Bar for Portrait */
+        .nav-system {
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            z-index: 100;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Portrait Adjustments */
+        @media (orientation: portrait) {
+            .app-shell { flex-direction: column-reverse; }
+            .nav-system {
+                width: 100vw; height: 70px;
+                flex-direction: row; justify-content: space-around;
+                padding: 0 20px; border-top: 1px solid rgba(255,255,255,0.1);
+            }
+            .sidebar-logo { display: none; }
+            .grid-layout { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .content-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+        }
+
+        /* Landscape Adjustments */
+        @media (orientation: landscape) {
+            .app-shell { flex-direction: row; }
+            .nav-system {
+                width: 80px; height: 100vh;
+                flex-direction: column; align-items: center;
+                padding: 30px 0; border-right: 1px solid rgba(255,255,255,0.1);
+            }
+            .grid-layout { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 30px; }
+        }
+
+        .content-scroll {
+            flex: 1; overflow-y: auto; padding: 30px;
+            background: radial-gradient(circle at top right, #0a1120, #000);
+        }
+
+        .movie-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .movie-card:hover { transform: scale(1.07); z-index: 10; }
+
+        .shimmer {
+            background: linear-gradient(90deg, #0a0a0a 25%, #151515 50%, #0a0a0a 75%);
+            background-size: 200% 100%; animation: loading 1.5s infinite;
+        }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <aside class="nav-system">
+            <div class="sidebar-logo w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center font-black mb-10 shadow-lg shadow-blue-600/20">M</div>
+            <nav class="flex flex-row landscape:flex-col gap-10 opacity-60 items-center">
+                <button class="text-xl hover:text-blue-500 transition-all">🏠</button>
+                <button class="text-xl hover:text-blue-500 transition-all">🔍</button>
+                <button class="text-xl hover:text-blue-500 transition-all">🔥</button>
+                <button class="text-xl hover:text-blue-500 transition-all">📂</button>
+            </nav>
+            <div class="landscape:mt-auto">
+                <div class="w-10 h-10 rounded-full border border-blue-500/30 overflow-hidden">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Mourish" alt="User">
+                </div>
+            </div>
+        </aside>
+
+        <main class="content-scroll">
+            <header class="content-header flex justify-between items-end mb-10">
+                <div>
+                    <h1 class="text-4xl font-black tracking-tighter">Mourish <span class="text-blue-500">Star</span></h1>
+                    <p class="text-slate-500 font-bold uppercase tracking-[0.3em] text-[9px] mt-2">Premium Multi-Lingual Cinema</p>
+                </div>
+                
+                <div class="flex gap-3 overflow-x-auto no-scrollbar w-full landscape:max-w-xl" id="lang-container">
+                    </div>
+            </header>
+
+            <div id="results-grid" class="grid-layout grid">
+                </div>
+        </main>
+    </div>
+
+    <div id="player-overlay" class="fixed inset-0 bg-black z-[200] hidden">
+        <button onclick="closePlayer()" class="absolute top-6 right-6 z-[210] w-12 h-12 bg-black/60 backdrop-blur-xl rounded-full text-2xl hover:bg-red-600 transition-all">&times;</button>
+        <div id="player-container" class="w-full h-full"></div>
+    </div>
+
+    <script>
+        const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjNDYyM2M4ZWU4YzRkNmJjNWMxNzQyMGYwMGQ5YzE3ZSIsIm5iZiI6MTc3NzA0Mzg3Ni4zODIwMDAyLCJzdWIiOiI2OWViODlhNDYwYmJmMDk5MTQwMjg0N2YiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.ka7Dpz7vxBK-x3rWCGE27HgMoXaVRDw4TVSn86_cj-g";
+        
+        const LANGUAGES = [
+            {code:'ta', name:'Tamil'}, {code:'hi', name:'Hindi'}, {code:'te', name:'Telugu'}, 
+            {code:'kn', name:'Kannada'}, {code:'ml', name:'Malayalam'}, {code:'en', name:'English'}
+        ];
+
+        let activeLang = 'ta';
+
+        function init() {
+            const container = document.getElementById('lang-container');
+            container.innerHTML = LANGUAGES.map(l => `
+                <button onclick="switchLang('${l.code}', this)" class="px-6 py-2 rounded-xl border border-white/5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${l.code === 'ta' ? 'bg-blue-600 border-blue-600' : 'bg-white/5'}">
+                    ${l.name}
+                </button>
+            `).join('');
+            loadData();
+        }
+
+        async function loadData() {
+            const grid = document.getElementById('results-grid');
+            grid.innerHTML = Array(12).fill(0).map(() => `<div class="shimmer aspect-[2/3] rounded-[2rem]"></div>`).join('');
+
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/discover/movie?with_original_language=${activeLang}&sort_by=popularity.desc&region=IN`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const data = await res.json();
+                
+                grid.innerHTML = data.results.filter(m => m.poster_path).map(m => `
+                    <div class="movie-card group cursor-pointer" onclick="watchMovie(${m.id}, '${(m.title || m.name).replace(/'/g, "\\'")}')">
+                        <div class="relative overflow-hidden rounded-[2rem] aspect-[2/3] border border-white/5 group-hover:border-blue-500/50 shadow-2xl">
+                            <img src="https://image.tmdb.org/t/p/w500${m.poster_path}" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                <div class="w-12 h-12 bg-white rounded-full text-black flex items-center justify-center font-bold pl-1 shadow-2xl scale-75 group-hover:scale-100 transition-transform">▶</div>
+                            </div>
+                        </div>
+                        <p class="text-[11px] font-bold mt-4 text-center truncate px-2 text-slate-400 group-hover:text-white transition-colors">${m.title || m.name}</p>
+                    </div>
+                `).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        function switchLang(code, el) {
+            activeLang = code;
+            document.querySelectorAll('#lang-container button').forEach(b => b.classList.remove('bg-blue-600', 'border-blue-600'));
+            el.classList.add('bg-blue-600', 'border-blue-600');
+            loadData();
+        }
+
+        function watchMovie(id, title) {
+            const player = document.getElementById('player-container');
+            player.innerHTML = `<iframe src="https://vidsrc.me/embed/movie?tmdb=${id}" class="w-full h-full" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+            document.getElementById('player-overlay').classList.remove('hidden');
+            if (window.innerHeight < window.innerWidth) { // If in landscape
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
+        function closePlayer() {
+            document.getElementById('player-overlay').classList.add('hidden');
+            document.getElementById('player-container').innerHTML = '';
+            if (document.fullscreenElement) document.exitFullscreen();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
